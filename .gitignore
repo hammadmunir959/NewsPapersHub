@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+output/
+.env
+*.egg-info/
+dist/
+build/
+newspapers/
+Docs/
+tests/
