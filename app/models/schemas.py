@@ -1,20 +1,20 @@
 from pydantic import BaseModel
 from typing import Optional
 from enum import Enum
-from app.core.config import SUPPORTED_NEWSPAPERS, SUPPORTED_METHODS
 
 
-# Dynamically create Enums from config
-# This ensures thatSwagger UI dropdowns stay in sync with our supported list
-ScrapeMethod = Enum(
-    "ScrapeMethod", 
-    {m.upper().replace("-", "_"): m for m in SUPPORTED_METHODS}, 
-    type=str
-)
+SUPPORTED_NEWSPAPERS = ["dawn", "thenews"]
+THENEWS_CITIES = ["islamabad", "karachi", "lahore", "peshawar", "rawalpindi"]
 
 NewspaperName = Enum(
     "NewspaperName", 
     {n.upper().replace("-", "_"): n for n in SUPPORTED_NEWSPAPERS}, 
+    type=str
+)
+
+CityName = Enum(
+    "CityName",
+    {c.upper(): c for c in THENEWS_CITIES},
     type=str
 )
 
