@@ -59,9 +59,10 @@ class DawnService:
                 logger.info(f"[{section}] ✓ Scraped: \"{title}\"")
                 return {"title": title, "content": content_html}
             except Exception as e:
-                logger.error(f"[{section}] ✗ Failed article {url}: {e}")
+                logger.error(f"[{section}] ✗ ERROR while scraping {url}: {str(e)}")
                 return None
             finally:
+                logger.info(f"[{section}] Closing page for article: {url}")
                 await page.close()
 
     @staticmethod
@@ -138,17 +139,35 @@ class DawnService:
             if article:
                 sections_map[section_name].append(article)
 
-        sections_data = [
-            {
-                "title": section.replace("-", " ").capitalize(),
-                "articles": sections_map[section],
-            }
-            for section in DAWN_SECTIONS
-            if sections_map[section]
-        ]
+        # Improved sorting/titling to match PDFService expectations
+        ordered_sections = []
+        # Ensure 'front-page' is first
+        if "front-page" in sections_map and sections_map["front-page"]:
+            ordered_sections.append({
+                "title": "Front Page",
+                "articles": sections_map.pop("front-page")
+            })
+        
+        # Add others
+        for section in DAWN_SECTIONS:
+            if section in sections_map and sections_map[section]:
+                ordered_sections.append({
+                    "title": section.replace("-", " ").title(),
+                    "articles": sections_map.pop(section)
+                })
+        
+        # Any leftovers
+        for section, arts in sections_map.items():
+            if arts:
+                ordered_sections.append({
+                    "title": section.replace("-", " ").title(),
+                    "articles": arts
+                })
 
-        if not sections_data:
+        if not ordered_sections:
             return None
+
+        sections_data = ordered_sections
 
         tmp_dir = tempfile.mkdtemp(prefix=f"dawn_{date_str}_")
         json_path = os.path.join(tmp_dir, "content.json")

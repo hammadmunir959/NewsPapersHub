@@ -12,6 +12,17 @@ DAWN_SECTIONS = [
     "front-page", "national", "international", "editorial", "opinion",
     "letters", "business", "metro-islamabad", "sport", "back-page"
 ]
+DAWN_RSS_FEEDS = {
+    "home": "https://www.dawn.com/feeds/home",
+    "pakistan": "https://www.dawn.com/feeds/pakistan",
+    "world": "https://www.dawn.com/feeds/world",
+    "business": "https://www.dawn.com/feeds/business",
+    "sport": "https://www.dawn.com/feeds/sport",
+    "opinion": "https://www.dawn.com/feeds/opinion",
+    "tech": "https://www.dawn.com/feeds/tech",
+    "magazines": "https://www.dawn.com/feeds/magazines",
+    "prism": "https://www.dawn.com/feeds/prism"
+}
 DAWN_USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
     "AppleWebKit/537.36 (KHTML, like Gecko) "

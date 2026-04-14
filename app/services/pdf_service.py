@@ -48,43 +48,55 @@ class SectionSwitch(Flowable):
         self.canv._doctemplate._date_str = self.date_str
 
 class DawnMasthead(Flowable):
-    def __init__(self, date_str, width=762, height=PDF_FRONT_MASTHEAD_HEIGHT):
+    def __init__(self, date_str, width=762, height=150): # Drastically reduced to ensure it fits
         super().__init__()
         self.width, self.height, self.date_str = width, height, date_str
         try:
             from datetime import datetime as dt
-            d = dt.strptime(date_str, "%Y-%m-%d")
+            # Try multiple formats including with/without _rss
+            clean_date = date_str.replace("_rss", "")
+            d = dt.strptime(clean_date, "%Y-%m-%d")
             self.day = d.strftime("%A")
             self.formatted_date = d.strftime("%B %d, %Y")
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Failed to parse date string '{date_str}': {e}")
             self.day, self.formatted_date = "Monday", date_str
 
     def draw(self):
         c = self.canv
         c.saveState()
         mid_x = self.width / 2.0
+        
+        # Position everything relative to the frame top (self.height)
+        # self.height is the frame height (e.g., 220)
+        
+        # Top tagline
         c.setFont("Helvetica", 9)
         c.drawCentredString(mid_x, self.height - 18, "F O U N D E D   B Y   Q U A I D - I - A Z A M   M O H A M M A D   A L I   J I N N A H")
         
         portrait_path = PDF_CONFIG["dawn"]["portrait_path"]
         if os.path.exists(portrait_path):
-            c.drawImage(portrait_path, 10, 45, width=160, height=130, mask='auto', preserveAspectRatio=True)
+            # Move portrait much higher (y is relative to frame bottom)
+            c.drawImage(portrait_path, 10, self.height - 180, width=160, height=130, mask='auto', preserveAspectRatio=True)
 
-        c.setFont("Times-Roman", 135)
-        c.drawCentredString(mid_x + 40, 50, PDF_CONFIG["dawn"]["logo_text"])
+        # Logo text
+        c.setFont("Times-Bold", 80) # Smaller logo
+        c.drawCentredString(mid_x + 30, 40, PDF_CONFIG["dawn"]["logo_text"])
         
-        c.setFont("Helvetica", 8)
+        # Date and location info - move to the very top right of the frame
+        c.setFont("Helvetica", 9)
         info_x = self.width - 15
-        c.drawRightString(info_x, 160, self.day)
-        c.drawRightString(info_x, 148, self.formatted_date)
+        top_y = self.height - 20
+        c.drawRightString(info_x, top_y, self.day)
+        c.drawRightString(info_x, top_y - 12, self.formatted_date)
         c.setLineWidth(1)
-        c.line(self.width - 80, 128, self.width - 10, 128)
+        c.line(self.width - 80, top_y - 25, self.width - 10, top_y - 25)
         c.setFont("Helvetica-Bold", 9)
-        c.drawCentredString(self.width - 45, 114, "KARACHI")
+        c.drawCentredString(self.width - 45, top_y - 38, "KARACHI")
         c.restoreState()
 
 class DawnSectionMasthead(Flowable):
-    def __init__(self, section_name, date_str, width=762, height=PDF_SECTION_MASTHEAD_HEIGHT):
+    def __init__(self, section_name, date_str, width=762, height=60): # Drastically reduced
         super().__init__()
         self.width, self.height, self.section_name, self.date_str = width, height, section_name.upper(), date_str
 
@@ -92,10 +104,11 @@ class DawnSectionMasthead(Flowable):
         c = self.canv
         c.saveState()
         c.setLineWidth(2.0)
-        c.line(0, self.height - 6, self.width, self.height - 6)
-        c.setFont("Times-Bold", 60)
-        c.drawCentredString(self.width / 2.0, 22, self.section_name)
-        c.line(0, 8, self.width, 8)
+        c.setLineWidth(1.0)
+        c.line(0, self.height - 2, self.width, self.height - 2)
+        c.setFont("Times-Bold", 45)
+        c.drawCentredString(self.width / 2.0, (self.height / 2.0) - 15, self.section_name)
+        c.line(0, 2, self.width, 2)
         c.restoreState()
 
 class PersistentHeaderDocTemplate(BaseDocTemplate):
@@ -131,16 +144,27 @@ class PDFService:
         col_count = PDF_CONFIG["global"]["col_count"]
         col_width = (usable_width - PDF_COL_GAP * (col_count - 1)) / col_count
 
+        SHOW_DEBUG_BOUNDARIES = 0
+        # Set to 1 to pinpoint layout issues if needed
+        SHOW_DEBUG_BOUNDARIES = 0
+
         def make_col_frames(top_of_columns, frame_id_prefix):
             col_height = top_of_columns - PDF_MARGIN
-            return [Frame(PDF_MARGIN + i * (col_width + PDF_COL_GAP), PDF_MARGIN, col_width, col_height, id=f"{frame_id_prefix}_{i}", leftPadding=0, rightPadding=0, topPadding=4, bottomPadding=0, showBoundary=0) for i in range(col_count)]
+            logger.info(f"Creating frames for {frame_id_prefix} from y={PDF_MARGIN} to {top_of_columns} (height={col_height})")
+            return [Frame(PDF_MARGIN + i * (col_width + PDF_COL_GAP), PDF_MARGIN, col_width, col_height, id=f"{frame_id_prefix}_{i}", leftPadding=0, rightPadding=0, topPadding=4, bottomPadding=0, showBoundary=SHOW_DEBUG_BOUNDARIES) for i in range(col_count)]
 
-        front_col_top = page_height - PDF_MARGIN - PDF_FRONT_MASTHEAD_HEIGHT - PDF_MASTHEAD_COL_GAP
-        front_masthead_frame = Frame(PDF_MARGIN, page_height - PDF_MARGIN - PDF_FRONT_MASTHEAD_HEIGHT, usable_width, PDF_FRONT_MASTHEAD_HEIGHT, id='masthead', showBoundary=0)
+        # Increased gap for safety
+        GAP = 40 
+        
+        # Masthead frames with NO padding to prevent rejection
+        masthead_y = page_height - PDF_MARGIN - PDF_FRONT_MASTHEAD_HEIGHT
+        front_masthead_frame = Frame(PDF_MARGIN, masthead_y, usable_width, PDF_FRONT_MASTHEAD_HEIGHT, id='masthead', leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0, showBoundary=SHOW_DEBUG_BOUNDARIES)
+        front_col_top = masthead_y - GAP
         front_col_frames = make_col_frames(front_col_top, 'front')
 
-        sec_col_top = page_height - PDF_MARGIN - PDF_SECTION_MASTHEAD_HEIGHT - PDF_MASTHEAD_COL_GAP
-        sec_masthead_frame = Frame(PDF_MARGIN, page_height - PDF_MARGIN - PDF_SECTION_MASTHEAD_HEIGHT, usable_width, PDF_SECTION_MASTHEAD_HEIGHT, id='section_masthead', showBoundary=0)
+        sec_masthead_y = page_height - PDF_MARGIN - PDF_SECTION_MASTHEAD_HEIGHT
+        sec_masthead_frame = Frame(PDF_MARGIN, sec_masthead_y, usable_width, PDF_SECTION_MASTHEAD_HEIGHT, id='section_masthead', leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0, showBoundary=SHOW_DEBUG_BOUNDARIES)
+        sec_col_top = sec_masthead_y - GAP
         sec_col_frames = make_col_frames(sec_col_top, 'section')
 
         normal_col_top = page_height - PDF_MARGIN - PDF_RUNNING_HEADER_HEIGHT
@@ -152,25 +176,36 @@ class PDFService:
             PageTemplate(id='NormalPage', frames=normal_col_frames),
         ])
 
+        logger.info(f"Starting PDF build for {newspaper} - {date_str}")
         story = []
         for idx, section in enumerate(sections_data):
             title = section.get('title', 'NEWS')
-            if idx == 0:
+            logger.info(f"Adding section: {title} with {len(section.get('articles', []))} articles")
+            
+            # Robust template selection: index 0 OR title "Front Page"
+            is_front = (idx == 0) or (title.upper() == "FRONT PAGE")
+            
+            if is_front:
                 story.append(NextPageTemplate('FrontPage'))
-                story.append(SectionSwitch(title, date_str))
+                # No PageBreak for the very first section
+                if idx > 0: story.append(PageBreak()) 
+                # Reorder to ensure DawnMasthead goes to the first frame
                 story.append(DawnMasthead(date_str, width=usable_width))
+                story.append(SectionSwitch(title, date_str))
                 story.append(FrameBreak())
                 story.append(NextPageTemplate('NormalPage'))
             else:
                 story.append(NextPageTemplate('SectionPage'))
                 story.append(PageBreak())
-                story.append(SectionSwitch(title, date_str))
+                # Reorder section masthead
                 story.append(DawnSectionMasthead(title, date_str, width=usable_width))
+                story.append(SectionSwitch(title, date_str))
                 story.append(FrameBreak())
                 story.append(NextPageTemplate('NormalPage'))
 
-            for art in section.get('articles', []):
+            for art_idx, art in enumerate(section.get('articles', [])):
                 headline = art.get('title', '').strip()
+                logger.info(f"  Processing article {art_idx+1}: {headline[:50]}...")
                 if headline: story.append(Paragraph(headline, styles['Headline']))
                 
                 content = art.get('content', '')
