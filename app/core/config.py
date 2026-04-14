@@ -10,7 +10,7 @@ SUPPORTED_NEWSPAPERS = ["dawn", "thenews"]
 # ── DAWN Configuration ──────────────────────────────────────
 DAWN_SECTIONS = [
     "front-page", "national", "international", "editorial", "opinion",
-    "letters", "business", "metro-islamabad", "sport", "back-page"
+    "letters", "business", "sport", "back-page"
 ]
 DAWN_RSS_FEEDS = {
     "home": "https://www.dawn.com/feeds/home",
