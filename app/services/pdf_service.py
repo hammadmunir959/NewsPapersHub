@@ -37,23 +37,26 @@ def get_newspaper_styles():
     return styles
 
 class SectionSwitch(Flowable):
-    def __init__(self, section_name, date_str):
+    def __init__(self, section_name, date_str, display_name=""):
         super().__init__()
         self.width = self.height = 0
         self.section_name = section_name
         self.date_str = date_str
+        self.display_name = display_name
 
     def draw(self):
         self.canv._doctemplate._current_section = self.section_name
         self.canv._doctemplate._date_str = self.date_str
+        if self.display_name:
+            self.canv._doctemplate._newspaper_display_name = self.display_name
 
-class DawnMasthead(Flowable):
-    def __init__(self, date_str, width=762, height=150): # Drastically reduced to ensure it fits
+class NewspaperMasthead(Flowable):
+    def __init__(self, date_str, news_config, width=762, height=150):
         super().__init__()
         self.width, self.height, self.date_str = width, height, date_str
+        self.news_config = news_config
         try:
             from datetime import datetime as dt
-            # Try multiple formats including with/without _rss
             clean_date = date_str.replace("_rss", "")
             d = dt.strptime(clean_date, "%Y-%m-%d")
             self.day = d.strftime("%A")
@@ -67,43 +70,46 @@ class DawnMasthead(Flowable):
         c.saveState()
         mid_x = self.width / 2.0
         
-        # Position everything relative to the frame top (self.height)
-        # self.height is the frame height (e.g., 220)
+        # Tagline
+        tagline = self.news_config.get("tagline", "")
+        if tagline:
+            c.setFont("Helvetica", 9)
+            c.drawCentredString(mid_x, self.height - 18, tagline)
         
-        # Top tagline
-        c.setFont("Helvetica", 9)
-        c.drawCentredString(mid_x, self.height - 18, "F O U N D E D   B Y   Q U A I D - I - A Z A M   M O H A M M A D   A L I   J I N N A H")
-        
-        portrait_path = PDF_CONFIG["dawn"]["portrait_path"]
-        if os.path.exists(portrait_path):
-            # Move portrait much higher (y is relative to frame bottom)
+        portrait_path = self.news_config.get("portrait_path")
+        if portrait_path and os.path.exists(portrait_path):
             c.drawImage(portrait_path, 10, self.height - 180, width=160, height=130, mask='auto', preserveAspectRatio=True)
 
         # Logo text
-        c.setFont("Times-Bold", 80) # Smaller logo
-        c.drawCentredString(mid_x + 30, 40, PDF_CONFIG["dawn"]["logo_text"])
+        logo_text = self.news_config.get("logo_text", "NEWS")
+        font_name = self.news_config.get("masthead_font", "Times-Bold")
+        font_size = self.news_config.get("masthead_font_size", 80)
+        c.setFont(font_name, font_size)
+        c.drawCentredString(mid_x + 30, 40, logo_text)
         
-        # Date and location info - move to the very top right of the frame
+        # Date and location info
         c.setFont("Helvetica", 9)
         info_x = self.width - 15
         top_y = self.height - 20
         c.drawRightString(info_x, top_y, self.day)
         c.drawRightString(info_x, top_y - 12, self.formatted_date)
-        c.setLineWidth(1)
-        c.line(self.width - 80, top_y - 25, self.width - 10, top_y - 25)
-        c.setFont("Helvetica-Bold", 9)
-        c.drawCentredString(self.width - 45, top_y - 38, "KARACHI")
+        
+        location = self.news_config.get("location", "")
+        if location:
+            c.setLineWidth(1)
+            c.line(self.width - 80, top_y - 25, self.width - 10, top_y - 25)
+            c.setFont("Helvetica-Bold", 9)
+            c.drawCentredString(self.width - 45, top_y - 38, location.upper())
         c.restoreState()
 
-class DawnSectionMasthead(Flowable):
-    def __init__(self, section_name, date_str, width=762, height=60): # Drastically reduced
+class SectionMasthead(Flowable):
+    def __init__(self, section_name, date_str, width=762, height=60):
         super().__init__()
         self.width, self.height, self.section_name, self.date_str = width, height, section_name.upper(), date_str
 
     def draw(self):
         c = self.canv
         c.saveState()
-        c.setLineWidth(2.0)
         c.setLineWidth(1.0)
         c.line(0, self.height - 2, self.width, self.height - 2)
         c.setFont("Times-Bold", 45)
@@ -116,6 +122,7 @@ class PersistentHeaderDocTemplate(BaseDocTemplate):
         super().__init__(filename, **kwargs)
         self._current_section = ""
         self._date_str = ""
+        self._newspaper_display_name = "NEWS"
 
     def afterPage(self):
         pt_id = getattr(self.pageTemplate, 'id', '')
@@ -126,7 +133,7 @@ class PersistentHeaderDocTemplate(BaseDocTemplate):
         pw, ph = self.pagesize
         top_y = ph - PDF_MARGIN + 6
         c.setFont("Times-Bold", 14)
-        c.drawString(PDF_MARGIN, top_y, "DAWN")
+        c.drawString(PDF_MARGIN, top_y, self._newspaper_display_name)
         c.setFont("Helvetica-Bold", 11)
         c.drawRightString(pw - PDF_MARGIN, top_y, self._current_section.upper())
         c.setLineWidth(2.5)
@@ -177,6 +184,11 @@ class PDFService:
         ])
 
         logger.info(f"Starting PDF build for {newspaper} - {date_str}")
+        
+        # Get newspaper-specific config
+        news_config = PDF_CONFIG.get(newspaper, PDF_CONFIG["dawn"]) 
+        display_name = news_config.get("display_name", newspaper.upper())
+        
         story = []
         for idx, section in enumerate(sections_data):
             title = section.get('title', 'NEWS')
@@ -189,17 +201,17 @@ class PDFService:
                 story.append(NextPageTemplate('FrontPage'))
                 # No PageBreak for the very first section
                 if idx > 0: story.append(PageBreak()) 
-                # Reorder to ensure DawnMasthead goes to the first frame
-                story.append(DawnMasthead(date_str, width=usable_width))
-                story.append(SectionSwitch(title, date_str))
+                # NewspaperMasthead is now configuration-driven
+                story.append(NewspaperMasthead(date_str, news_config, width=usable_width))
+                story.append(SectionSwitch(title, date_str, display_name=display_name))
                 story.append(FrameBreak())
                 story.append(NextPageTemplate('NormalPage'))
             else:
                 story.append(NextPageTemplate('SectionPage'))
                 story.append(PageBreak())
-                # Reorder section masthead
-                story.append(DawnSectionMasthead(title, date_str, width=usable_width))
-                story.append(SectionSwitch(title, date_str))
+                # SectionMasthead is now generic
+                story.append(SectionMasthead(title, date_str, width=usable_width))
+                story.append(SectionSwitch(title, date_str, display_name=display_name))
                 story.append(FrameBreak())
                 story.append(NextPageTemplate('NormalPage'))
 

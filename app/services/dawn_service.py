@@ -1,18 +1,15 @@
 import os
 import asyncio
 import logging
-import json
-import tempfile
-import shutil
 from bs4 import BeautifulSoup
 from playwright.async_api import async_playwright, BrowserContext
 
 from app.core.config import (
-    DAWN_SECTIONS, DAWN_USER_AGENT, DAWN_ARTICLE_CONCURRENCY,
-    DAWN_SECTION_CONCURRENCY, DAWN_MAX_ARTICLES_PER_SECTION,
-    DAWN_REQUEST_DELAY, PROJECT_ROOT
+    DAWN_USER_AGENT, DAWN_ARTICLE_CONCURRENCY,
+    DAWN_REQUEST_DELAY, DAWN_RSS_FEEDS
 )
 from app.utils.path_utils import get_newspaper_dir, get_pdf_path
+from app.services.rss_service import RSSService
 from app.services.pdf_service import PDFService
 
 logger = logging.getLogger(__name__)
@@ -66,37 +63,31 @@ class DawnService:
                 await page.close()
 
     @staticmethod
-    async def _fetch_section_urls(sem: asyncio.Semaphore, context: BrowserContext, section: str, date_str: str) -> tuple[str, list[str]]:
-        url = f"https://www.dawn.com/newspaper/{section}/{date_str}"
-        async with sem:
-            page = await context.new_page()
-            try:
-                logger.info(f"[{section}] Fetching section index: {url}")
-                await page.route("**/*", _block_resources)
-                await page.goto(url, wait_until="domcontentloaded", timeout=60000)
-                soup = BeautifulSoup(await page.content(), "html.parser")
-                links = soup.select("a.story__link")
-                urls = list(dict.fromkeys(
-                    l["href"] for l in links
-                    if l.get("href") and "dawn.com" in l["href"]
-                ))[:DAWN_MAX_ARTICLES_PER_SECTION]
-                if not urls:
-                    logger.warning(f"[{section}] No article links found on index page")
-                else:
-                    logger.info(f"[{section}] Found {len(urls)} article(s)")
-                return section, urls
-            except Exception as e:
-                logger.error(f"[{section}] ✗ Failed section index: {e}")
-                return section, []
-            finally:
-                await page.close()
+    async def process(date_str: str):
+        """
+        Main entry point for Dawn newspaper PDF generation.
+        Uses RSS feeds for article discovery and Playwright for content extraction.
+        """
+        logger.info(f"Starting Dawn process for date: {date_str} (RSS Method)")
+        pdf_path = get_pdf_path("dawn", date_str)
+        
+        # 1. Check Cache
+        if os.path.exists(pdf_path):
+            logger.info(f"Returning cached PDF: {pdf_path}")
+            return [PDFService._build_response("dawn", date_str, pdf_path, cached=True)]
 
-    @staticmethod
-    async def scrape(date_str: str) -> str | None:
-        logger.info(f"Starting Dawn scrape for date: {date_str}")
+        # 2. Discover Articles via RSS
+        articles = RSSService.fetch_articles(DAWN_RSS_FEEDS, date_filter=date_str)
+        if not articles:
+            logger.warning(f"No RSS articles found for date {date_str}")
+            # If no articles found for specific date, we can't proceed with generating that day's edition
+            raise ValueError(f"No articles found in RSS feeds for {date_str}")
+
+        logger.info(f"Found {len(articles)} articles in RSS. Starting content scrape...")
+
+        # 3. Scrape Full Content using Playwright
         article_sem = asyncio.Semaphore(DAWN_ARTICLE_CONCURRENCY)
-        section_sem = asyncio.Semaphore(DAWN_SECTION_CONCURRENCY)
-
+        
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=True)
             context = await browser.new_context(
@@ -105,93 +96,73 @@ class DawnService:
                 ignore_https_errors=True,
             )
 
-            section_tasks = [
-                DawnService._fetch_section_urls(section_sem, context, section, date_str)
-                for section in DAWN_SECTIONS
-            ]
-            section_results = await asyncio.gather(*section_tasks)
-
-            tagged_tasks = []
-            for section_name, urls in section_results:
-                for url in urls:
-                    tagged_tasks.append(
-                        (section_name, DawnService._fetch_article(article_sem, context, url, section_name))
-                    )
-
-            if not tagged_tasks:
-                logger.error("No articles found across all sections.")
-                await browser.close()
-                return None
-
-            total = len(tagged_tasks)
-            logger.info(f"Starting parallel fetch of {total} articles...")
+            tasks = []
+            for art in articles:
+                tasks.append(
+                    DawnService._fetch_article(article_sem, context, art["url"], art["section"])
+                )
             
-            section_names, coros = zip(*tagged_tasks)
-            articles = await asyncio.gather(*coros)
-            
-            succeeded = sum(1 for a in articles if a is not None)
-            logger.info(f"Article fetch complete — {succeeded}/{total} succeeded")
-            
+            scraped_contents = await asyncio.gather(*tasks)
             await browser.close()
 
-        sections_map = {s: [] for s in DAWN_SECTIONS}
-        for section_name, article in zip(section_names, articles):
-            if article:
-                sections_map[section_name].append(article)
+        # 4. Group by section (with RSS summary fallback)
+        sections_map = {}
+        fallback_count = 0
+        for original_art, scraped in zip(articles, scraped_contents):
+            section = original_art["section"]
+            if section not in sections_map:
+                sections_map[section] = []
 
-        # Improved sorting/titling to match PDFService expectations
-        ordered_sections = []
-        # Ensure 'front-page' is first
-        if "front-page" in sections_map and sections_map["front-page"]:
-            ordered_sections.append({
-                "title": "Front Page",
-                "articles": sections_map.pop("front-page")
-            })
-        
-        # Add others
-        for section in DAWN_SECTIONS:
-            if section in sections_map and sections_map[section]:
-                ordered_sections.append({
-                    "title": section.replace("-", " ").title(),
-                    "articles": sections_map.pop(section)
+            if scraped:
+                sections_map[section].append({
+                    "title": scraped["title"],
+                    "content": scraped["content"]
                 })
-        
-        # Any leftovers
-        for section, arts in sections_map.items():
-            if arts:
-                ordered_sections.append({
-                    "title": section.replace("-", " ").title(),
-                    "articles": arts
+            elif original_art.get("summary"):
+                # Fallback: use the RSS summary when Playwright scraping fails
+                logger.info(f"[{section}] Using RSS summary fallback for: {original_art['title']}")
+                sections_map[section].append({
+                    "title": original_art["title"],
+                    "content": original_art["summary"]
                 })
+                fallback_count += 1
+            else:
+                logger.warning(f"[{section}] Dropped article (no content): {original_art['url']}")
 
-        if not ordered_sections:
-            return None
+        if fallback_count:
+            logger.info(f"Used RSS summary fallback for {fallback_count} article(s)")
 
-        sections_data = ordered_sections
-
-        tmp_dir = tempfile.mkdtemp(prefix=f"dawn_{date_str}_")
-        json_path = os.path.join(tmp_dir, "content.json")
-        with open(json_path, "w", encoding="utf-8") as f:
-            json.dump(sections_data, f)
+        # 5. Format for PDFService
+        section_order = ["home", "latest-news", "pakistan", "world", "business", "opinion", "sport", "magazines", "tech", "prism"]
         
-        return json_path
+        sorted_sections = []
+        # First add "home" if it exists
+        if "home" in sections_map:
+            sorted_sections.append(("home", sections_map.pop("home")))
+        
+        # Then add others in pre-defined order
+        for s in section_order:
+            if s in sections_map:
+                sorted_sections.append((s, sections_map.pop(s)))
+        
+        # Then add any remaining
+        for s, arts in sections_map.items():
+            sorted_sections.append((s, arts))
 
-    @staticmethod
-    async def process(date_str: str):
-        pdf_path = get_pdf_path("dawn", date_str)
-        if os.path.exists(pdf_path):
-            return PDFService._build_response("dawn", date_str, pdf_path, cached=True)
+        sections_data = [
+            {
+                "title": section.replace("-", " ").title() if section != "home" else "Front Page",
+                "articles": arts
+            }
+            for section, arts in sorted_sections
+        ]
 
-        json_path = await DawnService.scrape(date_str)
-        if not json_path:
-            raise ValueError(f"No content found for Dawn on {date_str}")
+        if not sections_data:
+            raise ValueError(f"Failed to scrape any article content for {date_str}")
 
-        try:
-            with open(json_path, "r", encoding="utf-8") as f:
-                sections_data = json.load(f)
-            
-            os.makedirs(os.path.dirname(pdf_path), exist_ok=True)
-            PDFService._build_pdf(sections_data, pdf_path, "dawn", date_str)
-            return PDFService._build_response("dawn", date_str, pdf_path)
-        finally:
-            shutil.rmtree(os.path.dirname(json_path), ignore_errors=True)
+        # 6. Generate PDF
+        logger.info(f"Triggering PDF generation at {pdf_path}")
+        os.makedirs(os.path.dirname(pdf_path), exist_ok=True)
+        PDFService._build_pdf(sections_data, pdf_path, "dawn", date_str)
+        
+        return [PDFService._build_response("dawn", date_str, pdf_path)]

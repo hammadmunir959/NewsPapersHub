@@ -8,7 +8,7 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 
-app = FastAPI(title="DAWN ePaper API", version="2.0.0")
+app = FastAPI(title="NewsPapersHub API", version="2.0.0")
 
 app.add_middleware(
     CORSMiddleware,

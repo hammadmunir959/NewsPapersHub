@@ -8,12 +8,9 @@ NEWSPAPERS_DIR = os.path.join(PROJECT_ROOT, "newspapers")
 SUPPORTED_NEWSPAPERS = ["dawn", "thenews"]
 
 # ── DAWN Configuration ──────────────────────────────────────
-DAWN_SECTIONS = [
-    "front-page", "national", "international", "editorial", "opinion",
-    "letters", "business", "sport", "back-page"
-]
 DAWN_RSS_FEEDS = {
     "home": "https://www.dawn.com/feeds/home",
+    "latest-news": "https://www.dawn.com/feeds/latest-news",
     "pakistan": "https://www.dawn.com/feeds/pakistan",
     "world": "https://www.dawn.com/feeds/world",
     "business": "https://www.dawn.com/feeds/business",
@@ -29,12 +26,10 @@ DAWN_USER_AGENT = (
     "Chrome/125.0.0.0 Safari/537.36"
 )
 DAWN_ARTICLE_CONCURRENCY = 4
-DAWN_SECTION_CONCURRENCY = 3
-DAWN_MAX_ARTICLES_PER_SECTION = 25
 DAWN_REQUEST_DELAY = 0.5
 
 # ── THE NEWS Configuration ──────────────────────────────────
-THENEWS_CITIES = ["islamabad", "karachi", "lahore", "peshawar", "rawalpindi"]
+THENEWS_CITIES = ["islamabad", "karachi", "lahore"]
 THENEWS_PDF_BASE = "https://e.thenews.com.pk/static_pages"
 
 # ── PDF Generation Config ───────────────────────────────────
@@ -52,9 +47,22 @@ PDF_CONFIG = {
         "font_headline": "Times-Bold",
     },
     "dawn": {
-        "masthead_height": 160, # Dynamic base
+        "display_name": "DAWN",
         "logo_text": "DAWN",
+        "tagline": "F O U N D E D   B Y   Q U A I D - I - A Z A M   M O H A M M A D   A L I   J I N N A H",
+        "location": "KARACHI",
         "portrait_path": os.path.join(PROJECT_ROOT, "app/core/assets/quaid.jpg"),
+        "masthead_font": "Times-Bold",
+        "masthead_font_size": 80,
+    },
+    "thenews": {
+        "display_name": "THE NEWS",
+        "logo_text": "THE NEWS",
+        "tagline": "INTERNATIONAL",
+        "location": "ISLAMABAD",
+        "portrait_path": None,
+        "masthead_font": "Times-Bold",
+        "masthead_font_size": 70,
     }
 }
 

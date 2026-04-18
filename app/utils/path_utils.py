@@ -6,8 +6,13 @@ def get_newspaper_dir(newspaper: str) -> str:
     return os.path.join(NEWSPAPERS_DIR, newspaper.lower())
 
 def get_pdf_filename(newspaper: str, date_str: str, method: str = "") -> str:
-    """Return PDF filename, e.g. dawn_12_04_2026.pdf"""
+    """Return PDF filename, e.g. dawn_12_04_2026.pdf or TheNews_Islamabad_12-04-2026.pdf"""
     year, month, day = date_str.split("-")
+    
+    if newspaper.lower() == "thenews":
+        city = method.capitalize() if method else "National"
+        return f"TheNews_{city}_{day}_{month}_{year}.pdf"
+        
     suffix = f"_{method}" if method else ""
     return f"{newspaper.lower()}_{day}_{month}_{year}{suffix}.pdf"
 

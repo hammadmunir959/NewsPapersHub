@@ -4,7 +4,7 @@ import logging
 import urllib.request
 import urllib.error
 from app.core.config import THENEWS_CITIES, THENEWS_PDF_BASE
-from app.utils.path_utils import get_newspaper_dir
+from app.utils.path_utils import get_newspaper_dir, get_pdf_path
 from app.models.schemas import PaperSuccessResponse
 
 logger = logging.getLogger(__name__)
@@ -92,10 +92,10 @@ class TheNewsService:
 
     @staticmethod
     async def _download_city(
-        date_str: str, city: str, target_dir: str
+        date_str: str, city: str
     ) -> str | None:
         date_slug = TheNewsService._build_date_slug(date_str)
-        dest = os.path.join(target_dir, f"{city}_{date_str}.pdf")
+        dest = get_pdf_path("thenews", date_str, method=city)
 
         if os.path.exists(dest):
             logger.info(f"[thenews/{city}] Already exists: {dest}")
@@ -161,7 +161,7 @@ class TheNewsService:
         logger.info(f"[thenews] Downloading for {date_str}, cities={target_cities}")
 
         tasks = [
-            TheNewsService._download_city(date_str, city, target_dir)
+            TheNewsService._download_city(date_str, city)
             for city in target_cities
         ]
         results = await asyncio.gather(*tasks)
