@@ -3,8 +3,8 @@ from typing import Optional
 from enum import Enum
 
 
-SUPPORTED_NEWSPAPERS = ["dawn", "thenews"]
-THENEWS_CITIES = ["islamabad", "karachi", "lahore", "peshawar", "rawalpindi"]
+from app.core.config import SUPPORTED_NEWSPAPERS, THENEWS_CITIES
+
 
 NewspaperName = Enum(
     "NewspaperName", 
