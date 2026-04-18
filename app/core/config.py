@@ -1,4 +1,9 @@
 import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
 
 # ── Base Paths ──────────────────────────────────────────────
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -67,3 +72,5 @@ PDF_CONFIG = {
 }
 
 
+# ── Security Configuration ──────────────────────────────────
+APP_API_KEY = os.getenv("APP_API_KEY", "")

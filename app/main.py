@@ -1,7 +1,8 @@
 import logging
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1 import endpoints
+from app.api.deps import get_api_key
 
 logging.basicConfig(
     level=logging.INFO,
@@ -17,7 +18,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(endpoints.router, prefix="/api/v1", tags=["Newspapers"])
+app.include_router(
+    endpoints.router, 
+    prefix="/api/v1", 
+    tags=["Newspapers"],
+    dependencies=[Depends(get_api_key)]
+)
 
 @app.get("/health")
 def health():
