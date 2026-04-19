@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>NewsPapersHub — Service Offline</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        .container {
+            text-align: center;
+            max-width: 500px;
+            padding: 2rem;
+        }
+
+        .icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            color: #e74c3c;
+            margin-bottom: 0.5rem;
+        }
+
+        p {
+            color: #aaa;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+        }
+
+        code {
+            display: block;
+            background: #16213e;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 1rem;
+            font-size: 0.85rem;
+            color: #c9a94e;
+            margin-top: 1rem;
+            text-align: left;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="icon">⚠️</div>
+        <h1>Backend Service Not Running</h1>
+        <p>NewsPapersHub couldn't connect to the backend service on <strong>localhost:8765</strong>. Please ensure the
+            service is running.</p>
+        <code>
+      # Check service status:<br>
+      snap services newspapershub<br><br>
+      # Restart if needed:<br>
+      snap restart newspapershub.backend
+    </code>
+    </div>
+</body>
+
+</html>

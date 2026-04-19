@@ -89,7 +89,8 @@ class DawnService:
         article_sem = asyncio.Semaphore(DAWN_ARTICLE_CONCURRENCY)
         
         async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True)
+            browser = await p.chromium.launch(headless=True, channel="chrome")
+
             context = await browser.new_context(
                 user_agent=DAWN_USER_AGENT,
                 viewport={"width": 1280, "height": 800},

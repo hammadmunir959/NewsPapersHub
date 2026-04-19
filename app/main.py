@@ -18,12 +18,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from app.api.v1 import ws
+
 app.include_router(
     endpoints.router, 
     prefix="/api/v1", 
     tags=["Newspapers"],
     dependencies=[Depends(get_api_key)]
 )
+
+app.include_router(
+    ws.router,
+    prefix="/api/v1",
+    tags=["WebSockets"]
+)
+
 
 @app.get("/health")
 def health():

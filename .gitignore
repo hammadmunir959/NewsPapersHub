@@ -9,6 +9,11 @@ build/
 newspapers/
 Docs/
 tests/
-ui/
+# ui/
 docs/
+electron/dist/
+electron/web/
+electron/bin/
+*.spec
+node_modules/
 
