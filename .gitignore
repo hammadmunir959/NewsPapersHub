@@ -17,3 +17,5 @@ electron/bin/
 *.spec
 node_modules/
 
+test_*.py
+tests/

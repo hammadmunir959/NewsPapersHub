@@ -34,3 +34,23 @@ class PaperErrorResponse(BaseModel):
     status: str = "error"
     error: str
     detail: Optional[str] = None
+
+class TaskState(str, Enum):
+    PENDING = "pending"
+    DISCOVERING = "discovering"
+    DOWNLOADING = "downloading"
+    BUILDING_PDF = "building_pdf"
+    COMPLETED = "completed"
+    ERROR = "error"
+
+class TaskResponse(BaseModel):
+    status: str = "started"
+    message: str
+    task_id: str
+
+class TaskProgressResponse(BaseModel):
+    task_id: str
+    state: TaskState
+    percentage: int
+    message: str
+    result: Optional[list] = None

@@ -11,6 +11,8 @@ from app.core.config import (
 from app.utils.path_utils import get_newspaper_dir, get_pdf_path
 from app.services.rss_service import RSSService
 from app.services.pdf_service import PDFService
+from app.core.task_manager import task_manager
+from app.models.schemas import TaskState
 
 logger = logging.getLogger(__name__)
 
@@ -63,12 +65,15 @@ class DawnService:
                 await page.close()
 
     @staticmethod
-    async def process(date_str: str):
+    async def process(date_str: str, task_id: str = None):
         """
         Main entry point for Dawn newspaper PDF generation.
         Uses RSS feeds for article discovery and Playwright for content extraction.
         """
-        logger.info(f"Starting Dawn process for date: {date_str} (RSS Method)")
+        msg = f"Starting Dawn process for date: {date_str} (RSS Method)"
+        logger.info(msg)
+        if task_id: await task_manager.publish(task_id, TaskState.DISCOVERING, 5, msg)
+        
         pdf_path = get_pdf_path("dawn", date_str)
         
         # 1. Check Cache
@@ -77,16 +82,21 @@ class DawnService:
             return [PDFService._build_response("dawn", date_str, pdf_path, cached=True)]
 
         # 2. Discover Articles via RSS
-        articles = RSSService.fetch_articles(DAWN_RSS_FEEDS, date_filter=date_str)
+        if task_id: await task_manager.publish(task_id, TaskState.DISCOVERING, 10, "Discovering articles via RSS feeds...")
+        loop = asyncio.get_running_loop()
+        articles = await loop.run_in_executor(None, lambda: RSSService.fetch_articles(DAWN_RSS_FEEDS, date_filter=date_str))
         if not articles:
             logger.warning(f"No RSS articles found for date {date_str}")
             # If no articles found for specific date, we can't proceed with generating that day's edition
             raise ValueError(f"No articles found in RSS feeds for {date_str}")
 
-        logger.info(f"Found {len(articles)} articles in RSS. Starting content scrape...")
+        msg = f"Found {len(articles)} articles in RSS. Starting content scrape..."
+        logger.info(msg)
+        if task_id: await task_manager.publish(task_id, TaskState.DOWNLOADING, 20, msg)
 
         # 3. Scrape Full Content using Playwright
         article_sem = asyncio.Semaphore(DAWN_ARTICLE_CONCURRENCY)
+        total_arts = len(articles)
         
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=True, channel="chrome")
@@ -98,12 +108,22 @@ class DawnService:
             )
 
             tasks = []
-            for art in articles:
+            for idx, art in enumerate(articles):
                 tasks.append(
                     DawnService._fetch_article(article_sem, context, art["url"], art["section"])
                 )
             
-            scraped_contents = await asyncio.gather(*tasks)
+            # Gather with progress
+            scraped_contents = []
+            for idx, task in enumerate(asyncio.as_completed(tasks), 1):
+                res = await task
+                scraped_contents.append(res)
+                
+                if task_id and idx % max(1, total_arts // 5) == 0:
+                    pct = 20 + int(60 * (idx / total_arts))
+                    msg = f"Scraped {idx}/{total_arts} articles..."
+                    await task_manager.publish(task_id, TaskState.DOWNLOADING, pct, msg)
+
             await browser.close()
 
         # 4. Group by section (with RSS summary fallback)
@@ -162,8 +182,15 @@ class DawnService:
             raise ValueError(f"Failed to scrape any article content for {date_str}")
 
         # 6. Generate PDF
-        logger.info(f"Triggering PDF generation at {pdf_path}")
+        msg = f"Triggering PDF generation at {pdf_path}"
+        logger.info(msg)
+        if task_id: await task_manager.publish(task_id, TaskState.BUILDING_PDF, 85, "Formatting and generating final PDF...")
         os.makedirs(os.path.dirname(pdf_path), exist_ok=True)
-        PDFService._build_pdf(sections_data, pdf_path, "dawn", date_str)
+        
+        # Run blocking PDF generation in executor
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, PDFService._build_pdf, sections_data, pdf_path, "dawn", date_str)
+        
+        if task_id: await task_manager.publish(task_id, TaskState.COMPLETED, 100, "Successfully generated Dawn PDF!")
         
         return [PDFService._build_response("dawn", date_str, pdf_path)]

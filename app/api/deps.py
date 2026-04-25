@@ -11,7 +11,7 @@ def get_api_key(api_key: str = Security(api_key_header)):
             detail="Could not validate credentials",
         )
     
-    # Handle "Bearer <key>" format if used, or just raw key
+    # Handle "Bearer <key>" format if used, or just raw key 
     token = api_key
     if api_key.startswith("Bearer "):
         token = api_key.replace("Bearer ", "", 1)

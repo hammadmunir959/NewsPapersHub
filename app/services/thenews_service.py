@@ -5,7 +5,8 @@ import urllib.request
 import urllib.error
 from app.core.config import THENEWS_CITIES, THENEWS_PDF_BASE
 from app.utils.path_utils import get_newspaper_dir, get_pdf_path
-from app.models.schemas import PaperSuccessResponse
+from app.models.schemas import PaperSuccessResponse, TaskState
+from app.core.task_manager import task_manager
 
 logger = logging.getLogger(__name__)
 
@@ -91,8 +92,21 @@ class TheNewsService:
             return resp.read()
 
     @staticmethod
+    def _merge_pages(dest: str, page_images: list[bytes], city: str, task_id: str = None):
+        """Helper to merge pages using PIL in an executor wrapper."""
+        from PIL import Image
+        import io
+        pil_images = [Image.open(io.BytesIO(b)).convert("RGB") for b in page_images]
+        pil_images[0].save(
+            dest, save_all=True, append_images=pil_images[1:], format="PDF"
+        )
+        msg = f"[thenews/{city}] ✓ Saved {len(pil_images)}-page PDF → {dest}"
+        logger.info(msg)
+        return dest
+
+    @staticmethod
     async def _download_city(
-        date_str: str, city: str
+        date_str: str, city: str, task_id: str = None
     ) -> str | None:
         date_slug = TheNewsService._build_date_slug(date_str)
         dest = get_pdf_path("thenews", date_str, method=city)
@@ -104,10 +118,16 @@ class TheNewsService:
         loop = asyncio.get_running_loop()
         page_images: list[bytes] = []
         page = 1
+        
+        if task_id: await task_manager.publish(task_id, TaskState.DISCOVERING, 10, f"[{city}] Starting page discovery...")
 
         while True:
             page_url = TheNewsService._build_page_url(city, date_slug, page)
-            logger.info(f"[thenews/{city}] Fetching page {page}: {page_url}")
+            msg = f"[thenews/{city}] Fetching page {page}: {page_url}"
+            logger.info(msg)
+            
+            pct = min(80, 10 + (page * 2))
+            if task_id: await task_manager.publish(task_id, TaskState.DOWNLOADING, pct, f"[{city}] Fetching page {page}...")
 
             # Get the image URL embedded in the viewer HTML
             img_url = await loop.run_in_executor(
@@ -126,7 +146,9 @@ class TheNewsService:
                     f"[thenews/{city}] ✓ Page {page} ({len(img_bytes)//1024} KB)"
                 )
             except Exception as e:
-                logger.error(f"[thenews/{city}] ✗ Failed to download page {page} image: {e}")
+                err_msg = f"[thenews/{city}] ✗ Failed to download page {page} image: {e}"
+                logger.error(err_msg)
+                if task_id: await task_manager.publish(task_id, TaskState.ERROR, pct, err_msg)
                 break
 
             page += 1
@@ -136,32 +158,28 @@ class TheNewsService:
             return None
 
         # Merge all page images into a single PDF
+        if task_id: await task_manager.publish(task_id, TaskState.BUILDING_PDF, 85, f"[{city}] Merging {len(page_images)} pages into PDF...")
         try:
-            from PIL import Image
-            import io
-
-            pil_images = [Image.open(io.BytesIO(b)).convert("RGB") for b in page_images]
-            pil_images[0].save(
-                dest, save_all=True, append_images=pil_images[1:], format="PDF"
-            )
-            logger.info(f"[thenews/{city}] ✓ Saved {len(pil_images)}-page PDF → {dest}")
-            return dest
+            return await loop.run_in_executor(None, TheNewsService._merge_pages, dest, page_images, city, task_id)
         except Exception as e:
             logger.error(f"[thenews/{city}] ✗ PDF merge failed: {e}")
+            if task_id: await task_manager.publish(task_id, TaskState.ERROR, 85, f"[{city}] PDF merge failed: {e}")
             return None
 
     @staticmethod
     async def process(
-        date_str: str, cities: list[str] | None = None
+        date_str: str, cities: list[str] | None = None, task_id: str = None
     ) -> list[PaperSuccessResponse]:
         target_cities = cities or THENEWS_CITIES
         target_dir = get_newspaper_dir("thenews")
         os.makedirs(target_dir, exist_ok=True)
 
-        logger.info(f"[thenews] Downloading for {date_str}, cities={target_cities}")
+        msg = f"[thenews] Downloading for {date_str}, cities={target_cities}"
+        logger.info(msg)
+        if task_id: await task_manager.publish(task_id, TaskState.DISCOVERING, 5, msg)
 
         tasks = [
-            TheNewsService._download_city(date_str, city)
+            TheNewsService._download_city(date_str, city, task_id)
             for city in target_cities
         ]
         results = await asyncio.gather(*tasks)
