@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, Any
 from enum import Enum
 
 
@@ -19,22 +19,6 @@ CityName = Enum(
 )
 
 
-class PaperSuccessResponse(BaseModel):
-    status: str = "success"
-    message: str
-    newspaper: str
-    date: str
-    file_name: str
-    saved_at: str
-    pages: int
-    size_mb: float
-
-
-class PaperErrorResponse(BaseModel):
-    status: str = "error"
-    error: str
-    detail: Optional[str] = None
-
 class TaskState(str, Enum):
     PENDING = "pending"
     DISCOVERING = "discovering"
@@ -43,14 +27,17 @@ class TaskState(str, Enum):
     COMPLETED = "completed"
     ERROR = "error"
 
-class TaskResponse(BaseModel):
-    status: str = "started"
-    message: str
-    task_id: str
+class PaperSuccessResponse(BaseModel):
+    newspaper: str
+    date: str
+    file_name: str
+    path: str  # Renamed from saved_at
+    pages: int
+    size_mb: float
 
 class TaskProgressResponse(BaseModel):
-    task_id: str
+    id: str         # Renamed from task_id
     state: TaskState
-    percentage: int
+    progress: int    # Renamed from percentage
     message: str
-    result: Optional[list] = None
+    result: Optional[Any] = None

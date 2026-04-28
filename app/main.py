@@ -3,6 +3,7 @@ from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1 import endpoints
 from app.api.deps import get_api_key
+from app.core.database import init_db
 
 logging.basicConfig(
     level=logging.INFO,
@@ -11,14 +12,16 @@ logging.basicConfig(
 
 app = FastAPI(title="NewsPapersHub API", version="2.0.0")
 
+@app.on_event("startup")
+async def startup_event():
+    await init_db()
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # local dev only
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-from app.api.v1 import ws
 
 app.include_router(
     endpoints.router, 
@@ -26,13 +29,6 @@ app.include_router(
     tags=["Newspapers"],
     dependencies=[Depends(get_api_key)]
 )
-
-app.include_router(
-    ws.router,
-    prefix="/api/v1",
-    tags=["WebSockets"]
-)
-
 
 @app.get("/health")
 def health():

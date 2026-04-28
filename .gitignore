@@ -19,3 +19,5 @@ node_modules/
 
 test_*.py
 tests/
+newspapers/
+.db
