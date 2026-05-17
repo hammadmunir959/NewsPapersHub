@@ -1,3 +1,4 @@
+from datetime import datetime
 from pydantic import BaseModel
 from typing import Optional, Any
 from enum import Enum
@@ -41,3 +42,35 @@ class TaskProgressResponse(BaseModel):
     progress: int    # Renamed from percentage
     message: str
     result: Optional[Any] = None
+    broadcast_status: Optional[str] = None
+    broadcast_at: Optional[datetime] = None
+    broadcast_error: Optional[str] = None
+
+class SubscriberBase(BaseModel):
+    phone_number: str
+    full_name: Optional[str] = None
+    is_active: int = 1
+
+class SubscriberCreate(SubscriberBase):
+    pass
+
+class SubscriberUpdate(BaseModel):
+    phone_number: Optional[str] = None
+    full_name: Optional[str] = None
+    is_active: Optional[int] = None
+
+class SubscriberResponse(SubscriberBase):
+    id: int
+    created_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+class MediaRequest(BaseModel):
+    to: str
+    media_path: str
+    caption: Optional[str] = None
+
+class BroadcastRequest(BaseModel):
+    media_path: str
+    text: Optional[str] = None  # Caption text; supports {name} placeholder

@@ -9,8 +9,8 @@ import io
 
 from app.core.config import THENEWS_CITIES, THENEWS_PDF_BASE
 from app.utils.path_utils import get_newspaper_dir, get_pdf_path
-from app.models.schemas import PaperSuccessResponse, TaskState
-from app.services.task_manager_service import task_manager
+from app.schemas.schemas import PaperSuccessResponse, TaskState
+from app.services.task_manager_service import task_service
 
 logger = logging.getLogger(__name__)
 
@@ -140,7 +140,7 @@ class TheNewsService:
         fetcher = TheNewsEpubFetcher(THENEWS_CONFIG)
 
         if task_id:
-            await task_manager.publish(task_id, TaskState.DISCOVERING, 10,
+            await task_service.publish(task_id, TaskState.DISCOVERING, 10,
                                        f"[{city}] Starting page discovery...")
 
         page_images: List[bytes] = []
@@ -156,7 +156,7 @@ class TheNewsService:
                 logger.info("[thenews/%s] Downloading page %d: %s", city, page, img_url)
                 pct = min(80, 10 + (page * 2))
                 if task_id:
-                    await task_manager.publish(task_id, TaskState.DOWNLOADING, pct,
+                    await task_service.publish(task_id, TaskState.DOWNLOADING, pct,
                                                f"[{city}] Downloading page {page}...")
 
                 img_bytes = await fetcher.download_image(session, img_url)
@@ -170,13 +170,13 @@ class TheNewsService:
         if not page_images:
             logger.error("[thenews/%s] No pages downloaded for %s", city, date_str)
             if task_id:
-                await task_manager.publish(task_id, TaskState.ERROR, 50,
+                await task_service.publish(task_id, TaskState.ERROR, 50,
                                            f"[{city}] No pages found")
             return None
 
         # Merge images into PDF
         if task_id:
-            await task_manager.publish(task_id, TaskState.BUILDING_PDF, 85,
+            await task_service.publish(task_id, TaskState.BUILDING_PDF, 85,
                                        f"[{city}] Merging {len(page_images)} pages...")
 
         loop = asyncio.get_running_loop()
@@ -185,7 +185,7 @@ class TheNewsService:
         except Exception as e:
             logger.exception("[thenews/%s] PDF merge failed", city)
             if task_id:
-                await task_manager.publish(task_id, TaskState.ERROR, 85,
+                await task_service.publish(task_id, TaskState.ERROR, 85,
                                            f"[{city}] PDF merge failed: {e}")
             return None
 
@@ -202,7 +202,7 @@ class TheNewsService:
         msg = f"[thenews] Downloading for {date_str}, cities={target_cities}"
         logger.info(msg)
         if task_id:
-            await task_manager.publish(task_id, TaskState.DISCOVERING, 5, msg)
+            await task_service.publish(task_id, TaskState.DISCOVERING, 5, msg)
 
         tasks = [
             TheNewsService._download_city(date_str, city, task_id)

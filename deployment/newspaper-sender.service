@@ -1,0 +1,14 @@
+[Unit]
+Description=Newspaper Auto-Delivery Scheduler
+After=newspapershub.service
+
+[Service]
+Type=simple
+User=my-pc
+WorkingDirectory=/home/my-pc/Desktop/Programming/CodeKonix/Projects/NewsPapersHub
+ExecStart=/home/my-pc/.local/bin/uv run python -m app.services.scheduler_service
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target

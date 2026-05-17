@@ -1,7 +1,7 @@
 from datetime import datetime
 from sqlalchemy import Column, String, Integer, DateTime, JSON
 from app.core.database import Base
-from app.models.schemas import TaskState
+from app.schemas.schemas import TaskState
 
 class TaskRecord(Base):
     __tablename__ = "tasks"
@@ -14,5 +14,17 @@ class TaskRecord(Base):
     percentage = Column(Integer, default=0)
     message = Column(String, default="")
     result = Column(JSON, nullable=True)
+    broadcast_status = Column(String, default="pending")
+    broadcast_at = Column(DateTime, nullable=True)
+    broadcast_error = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class Subscriber(Base):
+    __tablename__ = "subscribers"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    phone_number = Column(String, unique=True, nullable=False)
+    full_name = Column(String, nullable=True)
+    is_active = Column(Integer, default=1)
+    created_at = Column(DateTime, default=datetime.utcnow)

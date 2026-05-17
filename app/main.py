@@ -1,7 +1,8 @@
 import logging
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.v1 import endpoints
+from app.api.v1 import endpoints, subscribers, whatsapp
 from app.api.deps import get_api_key
 from app.core.database import init_db
 
@@ -10,11 +11,19 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 
-app = FastAPI(title="NewsPapersHub API", version="2.0.0")
 
-@app.on_event("startup")
-async def startup_event():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Run startup tasks before serving requests."""
     await init_db()
+    yield
+
+
+app = FastAPI(
+    title="NewsPapersHub API",
+    version="2.0.0",
+    lifespan=lifespan,
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -24,11 +33,26 @@ app.add_middleware(
 )
 
 app.include_router(
-    endpoints.router, 
-    prefix="/api/v1", 
+    endpoints.router,
+    prefix="/api/v1",
     tags=["Newspapers"],
-    dependencies=[Depends(get_api_key)]
+    dependencies=[Depends(get_api_key)],
 )
+
+app.include_router(
+    subscribers.router,
+    prefix="/api/v1/subscribers",
+    tags=["Subscribers"],
+    dependencies=[Depends(get_api_key)],
+)
+
+app.include_router(
+    whatsapp.router,
+    prefix="/api/v1/whatsapp",
+    tags=["WhatsApp"],
+    dependencies=[Depends(get_api_key)],
+)
+
 
 @app.get("/health")
 def health():

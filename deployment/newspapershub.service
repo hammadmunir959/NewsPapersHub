@@ -1,0 +1,14 @@
+[Unit]
+Description=NewsPapersHub FastAPI Service
+After=network.target
+
+[Service]
+Type=simple
+User=my-pc
+WorkingDirectory=/home/my-pc/Desktop/Programming/CodeKonix/Projects/NewsPapersHub
+ExecStart=/usr/local/bin/uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

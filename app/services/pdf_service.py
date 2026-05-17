@@ -16,7 +16,7 @@ from app.core.config import (
     PDF_FRONT_MASTHEAD_HEIGHT, PDF_SECTION_MASTHEAD_HEIGHT,
     PDF_MASTHEAD_COL_GAP, PDF_RUNNING_HEADER_HEIGHT
 )
-from app.models.schemas import PaperSuccessResponse
+from app.schemas.schemas import PaperSuccessResponse
 
 logger = logging.getLogger(__name__)
 

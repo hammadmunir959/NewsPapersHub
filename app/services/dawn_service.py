@@ -12,8 +12,8 @@ from app.core.config import (
 from app.utils.path_utils import get_pdf_path
 from app.services.rss_service import RSSService
 from app.services.pdf_service import PDFService
-from app.services.task_manager_service import task_manager
-from app.models.schemas import TaskState
+from app.services.task_manager_service import task_service
+from app.schemas.schemas import TaskState
 
 logger = logging.getLogger(__name__)
 
@@ -112,7 +112,7 @@ class DawnService:
         """
         logger.info(f"Starting Dawn process for {date_str} (RSS method)")
         if task_id:
-            await task_manager.publish(task_id, TaskState.DISCOVERING, 5,
+            await task_service.publish(task_id, TaskState.DISCOVERING, 5,
                                        f"Starting Dawn process for {date_str}")
         
         pdf_path = get_pdf_path("dawn", date_str)
@@ -122,9 +122,9 @@ class DawnService:
             logger.info(f"Returning cached PDF: {pdf_path}")
             return PDFService._build_response("dawn", date_str, pdf_path)
         
-        # 2. Discover articles via RSS (run blocking code in executor)
+        # 2. Discover articles via RSS (run blocking feedparser in executor)
         if task_id:
-            await task_manager.publish(task_id, TaskState.DISCOVERING, 10,
+            await task_service.publish(task_id, TaskState.DISCOVERING, 10,
                                        "Discovering articles via RSS feeds...")
         loop = asyncio.get_running_loop()
         articles = await loop.run_in_executor(
@@ -136,7 +136,7 @@ class DawnService:
         total_arts = len(articles)
         logger.info(f"Found {total_arts} RSS articles")
         if task_id:
-            await task_manager.publish(task_id, TaskState.DOWNLOADING, 20,
+            await task_service.publish(task_id, TaskState.DOWNLOADING, 20,
                                        f"Scraping {total_arts} articles...")
         
         # 3. Scrape full content with Playwright
@@ -148,7 +148,6 @@ class DawnService:
                     viewport={"width": 1280, "height": 800},
                     ignore_https_errors=True,
                 )
-                # Run scraping and report progress in chunks
                 scraped_contents = await self._run_scraping_with_progress(
                     context, articles, task_id, total_arts
                 )
@@ -172,17 +171,18 @@ class DawnService:
         if not sections_data:
             raise ValueError(f"Failed to scrape any article content for {date_str}")
         
-        # 6. Generate PDF (blocking code in executor)
+        # 6. Generate PDF (blocking ReportLab call in executor)
         if task_id:
-            await task_manager.publish(task_id, TaskState.BUILDING_PDF, 85,
+            await task_service.publish(task_id, TaskState.BUILDING_PDF, 85,
                                        "Formatting and generating final PDF...")
         os.makedirs(os.path.dirname(pdf_path), exist_ok=True)
-        await loop.run_in_executor(
+        # Fresh loop reference after exiting the async with block
+        await asyncio.get_running_loop().run_in_executor(
             None, PDFService._build_pdf, sections_data, pdf_path, "dawn", date_str
         )
         
         if task_id:
-            await task_manager.publish(task_id, TaskState.COMPLETED, 100,
+            await task_service.publish(task_id, TaskState.COMPLETED, 100,
                                        "Successfully generated Dawn PDF!")
         
         return PDFService._build_response("dawn", date_str, pdf_path)
@@ -207,7 +207,7 @@ class DawnService:
             
             if task_id and (completed_count == total or completed_count % max(1, total // 5) == 0):
                 pct = 20 + int(60 * (completed_count / total))
-                await task_manager.publish(
+                await task_service.publish(
                     task_id, TaskState.DOWNLOADING, pct,
                     f"Scraped {completed_count}/{total} articles..."
                 )

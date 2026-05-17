@@ -1,0 +1,14 @@
+services:
+  newspapershub:
+    build: .
+    image: newspapershub-slim:latest
+    container_name: newspapershub_system
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount db directory to persist tasks and WhatsApp login
+      - ./db:/app/db
+      - ./newspapers:/app/newspapers
+    environment:
+      - PYTHONUNBUFFERED=1

@@ -6,23 +6,8 @@ from app.core.config import DAWN_RSS_FEEDS
 
 logger = logging.getLogger(__name__)
 
+# Pakistan Standard Time (UTC+5) — used for date-normalising RSS timestamps.
 PKT = timezone(timedelta(hours=5))
-
-DAWN_RSS_CONFIG = {
-    "feeds": {
-        "home":           "https://www.dawn.com/feeds/home",
-        "latest-news":    "https://www.dawn.com/feeds/latest-news",
-        "pakistan":       "https://www.dawn.com/feeds/pakistan",
-        "world":          "https://www.dawn.com/feeds/world",
-        "business":       "https://www.dawn.com/feeds/business",
-        "opinion":        "https://www.dawn.com/feeds/opinion",
-        "sport":          "https://www.dawn.com/feeds/sport",
-        "magazines":      "https://www.dawn.com/feeds/magazines",
-        "tech":           "https://www.dawn.com/feeds/tech",
-        "prism":          "https://www.dawn.com/feeds/prism",
-    },
-    "timezone": PKT,
-}
 
 
 class RSSArticleFetcher:

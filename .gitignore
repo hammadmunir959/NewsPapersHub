@@ -20,4 +20,7 @@ node_modules/
 test_*.py
 tests/
 newspapers/
-.db
+*.db
+
+neonize_session.sqlite3
+\ndb/

@@ -1,0 +1,62 @@
+{"event": "=== INSTANT MANUAL DELIVERY: 2026-05-17 for both newspapers ===", "level": "info", "timestamp": "2026-05-17 08:14:06"}
+{"event": "Manual pipeline execution triggered for date=2026-05-17, papers=['dawn', 'thenews']", "level": "info", "timestamp": "2026-05-17 08:14:06"}
+{"event": "=== Dawn delivery run: 2026-05-17 ===", "level": "info", "timestamp": "2026-05-17 08:14:06"}
+{"event": "=== The News delivery run: 2026-05-17 ===", "level": "info", "timestamp": "2026-05-17 08:14:06"}
+{"event": "[thenews] Downloading for 2026-05-17, cities=['islamabad']", "level": "info", "timestamp": "2026-05-17 08:14:06"}
+{"event": "Starting Dawn process for 2026-05-17 (RSS method)", "level": "info", "timestamp": "2026-05-17 08:14:06"}
+{"event": "[thenews/islamabad] Already cached: /home/my-pc/Desktop/Programming/CodeKonix/Projects/NewsPapersHub/newspapers/thenews/TheNews_Islamabad_17_05_2026.pdf", "level": "info", "timestamp": "2026-05-17 08:14:06"}
+{"event": "Returning cached PDF: /home/my-pc/Desktop/Programming/CodeKonix/Projects/NewsPapersHub/newspapers/dawn/dawn_17_05_2026.pdf", "level": "info", "timestamp": "2026-05-17 08:14:06"}
+{"event": "PDF ready: /home/my-pc/Desktop/Programming/CodeKonix/Projects/NewsPapersHub/newspapers/dawn/dawn_17_05_2026.pdf (0.27 MB)", "level": "info", "timestamp": "2026-05-17 08:14:06"}
+{"event": "Broadcasting to 2 subscriber(s)...", "level": "info", "timestamp": "2026-05-17 08:14:06"}
+{"event": "\u2713 Sent to 923119771180", "level": "info", "timestamp": "2026-05-17 08:16:15"}
+{"event": "Error sending close to websocket: failed to close WebSocket: failed to read frame header: EOF", "level": "warning", "timestamp": "2026-05-17 08:16:16"}
+{"event": "\u2713 Sent to 923556859840", "level": "info", "timestamp": "2026-05-17 08:17:24"}
+{"event": "Error sending close to websocket: failed to close WebSocket: failed to read frame header: EOF", "level": "warning", "timestamp": "2026-05-17 08:17:25"}
+{"event": "Broadcast complete.", "level": "info", "timestamp": "2026-05-17 08:17:27"}
+{"event": "Broadcasting to 2 subscriber(s)...", "level": "info", "timestamp": "2026-05-17 08:17:27"}
+{"event": "\u2713 Sent to 923119771180", "level": "info", "timestamp": "2026-05-17 08:17:37"}
+{"event": "Error sending close to websocket: failed to close WebSocket: failed to read frame header: EOF", "level": "warning", "timestamp": "2026-05-17 08:17:37"}
+{"event": "\u2713 Sent to 923556859840", "level": "info", "timestamp": "2026-05-17 08:17:50"}
+{"event": "Error sending close to websocket: failed to close WebSocket: failed to read frame header: EOF", "level": "warning", "timestamp": "2026-05-17 08:17:51"}
+{"event": "Broadcast complete.", "level": "info", "timestamp": "2026-05-17 08:17:53"}
+{"event": "=== Dawn delivery complete for 2026-05-17 ===", "level": "info", "timestamp": "2026-05-17 08:17:53"}
+{"event": "=== INSTANT DELIVERY PROCESS FINISHED ===", "level": "info", "timestamp": "2026-05-17 08:17:53"}
+{"event": "=== INSTANT MANUAL DELIVERY: 2026-05-17 for both newspapers ===", "level": "info", "timestamp": "2026-05-17 08:20:16"}
+{"event": "Manual pipeline execution triggered for date=2026-05-17, papers=['dawn', 'thenews']", "level": "info", "timestamp": "2026-05-17 08:20:16"}
+{"event": "=== Dawn delivery run: 2026-05-17 ===", "level": "info", "timestamp": "2026-05-17 08:20:16"}
+{"event": "=== The News delivery run: 2026-05-17 ===", "level": "info", "timestamp": "2026-05-17 08:20:16"}
+{"event": "Starting Dawn process for 2026-05-17 (RSS method)", "level": "info", "timestamp": "2026-05-17 08:20:16"}
+{"event": "[thenews] Downloading for 2026-05-17, cities=['islamabad']", "level": "info", "timestamp": "2026-05-17 08:20:16"}
+{"event": "Returning cached PDF: /home/my-pc/Desktop/Programming/CodeKonix/Projects/NewsPapersHub/newspapers/dawn/dawn_17_05_2026.pdf", "level": "info", "timestamp": "2026-05-17 08:20:16"}
+{"event": "PDF ready: /home/my-pc/Desktop/Programming/CodeKonix/Projects/NewsPapersHub/newspapers/dawn/dawn_17_05_2026.pdf (0.27 MB)", "level": "info", "timestamp": "2026-05-17 08:20:16"}
+{"event": "Broadcasting to 2 subscriber(s)...", "level": "info", "timestamp": "2026-05-17 08:20:16"}
+{"event": "[thenews/islamabad] Already cached: /home/my-pc/Desktop/Programming/CodeKonix/Projects/NewsPapersHub/newspapers/thenews/TheNews_Islamabad_17_05_2026.pdf", "level": "info", "timestamp": "2026-05-17 08:20:16"}
+{"event": "\u2713 Sent to 923119771180", "level": "info", "timestamp": "2026-05-17 08:20:31"}
+{"event": "Error sending close to websocket: failed to close WebSocket: failed to read frame header: EOF", "level": "warning", "timestamp": "2026-05-17 08:20:32"}
+{"event": "\u2713 Sent to 923556859840", "level": "info", "timestamp": "2026-05-17 08:20:47"}
+{"event": "Error sending close to websocket: failed to close WebSocket: failed to read frame header: EOF", "level": "warning", "timestamp": "2026-05-17 08:20:49"}
+{"event": "Scheduler started \u2014 window: 19:00 \u2013 00:00 (midnight), check interval: every 30 min", "level": "info", "timestamp": "2026-05-17 08:20:50"}
+{"event": "Broadcast complete.", "level": "info", "timestamp": "2026-05-17 08:20:51"}
+{"event": "Broadcasting to 2 subscriber(s)...", "level": "info", "timestamp": "2026-05-17 08:20:51"}
+{"event": "=== Dawn delivery complete for 2026-05-17 ===", "level": "info", "timestamp": "2026-05-17 08:20:51"}
+{"event": "\u2713 Sent to 923119771180", "level": "info", "timestamp": "2026-05-17 08:21:15"}
+{"event": "Error sending close to websocket: failed to close WebSocket: failed to read frame header: EOF", "level": "warning", "timestamp": "2026-05-17 08:21:15"}
+{"event": "\u2713 Sent to 923556859840", "level": "info", "timestamp": "2026-05-17 08:21:44"}
+{"event": "Error sending close to websocket: failed to close WebSocket: failed to read frame header: EOF", "level": "warning", "timestamp": "2026-05-17 08:21:44"}
+{"event": "Broadcast complete.", "level": "info", "timestamp": "2026-05-17 08:21:46"}
+{"event": "=== INSTANT DELIVERY PROCESS FINISHED ===", "level": "info", "timestamp": "2026-05-17 08:21:46"}
+{"event": "Starting WhatsApp auth. Session will be saved to: ./neonize_session.sqlite3", "level": "info", "timestamp": "2026-05-17 08:58:00"}
+{"event": "Existing session found. Connecting to verify...", "level": "info", "timestamp": "2026-05-17 08:58:00"}
+{"event": "\u2713 Connected! WhatsApp session is active.", "level": "info", "timestamp": "2026-05-17 08:58:02"}
+{"event": "Session saved to: ./neonize_session.sqlite3", "level": "info", "timestamp": "2026-05-17 08:58:02"}
+{"event": "You can now press Ctrl+C to exit. The cron scheduler will use this session.", "level": "info", "timestamp": "2026-05-17 08:58:02"}
+{"event": "Starting WhatsApp auth. Session will be saved to: ./neonize_session.sqlite3", "level": "info", "timestamp": "2026-05-17 09:00:30"}
+{"event": "Existing session found. Connecting to verify...", "level": "info", "timestamp": "2026-05-17 09:00:30"}
+{"event": "\u2713 Connected! WhatsApp session is active.", "level": "info", "timestamp": "2026-05-17 09:00:32"}
+{"event": "Session saved to: ./neonize_session.sqlite3", "level": "info", "timestamp": "2026-05-17 09:00:32"}
+{"event": "You can now press Ctrl+C to exit. The cron scheduler will use this session.", "level": "info", "timestamp": "2026-05-17 09:00:32"}
+{"event": "Starting WhatsApp auth. Session will be saved to: ./neonize_session.sqlite3", "level": "info", "timestamp": "2026-05-17 09:02:35"}
+{"event": "Existing session found. Connecting to verify...", "level": "info", "timestamp": "2026-05-17 09:02:35"}
+{"event": "\u2713 Connected! WhatsApp session is active.", "level": "info", "timestamp": "2026-05-17 09:02:37"}
+{"event": "Session saved to: ./neonize_session.sqlite3", "level": "info", "timestamp": "2026-05-17 09:02:37"}
+{"event": "You can now press Ctrl+C to exit. The cron scheduler will use this session.", "level": "info", "timestamp": "2026-05-17 09:02:37"}

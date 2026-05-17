@@ -6,7 +6,7 @@ from fastapi.responses import StreamingResponse
 
 from app.services.dawn_service import DawnService
 from app.services.thenews_service import TheNewsService
-from app.models.schemas import TaskProgressResponse, CityName, TaskState
+from app.schemas.schemas import TaskProgressResponse, CityName, TaskState
 from app.utils.date_utils import validate_date
 from app.services.task_manager_service import task_service
 
@@ -19,6 +19,23 @@ async def stream_task_progress(task_id: str):
     Stream real-time task progress updates via Server-Sent Events (SSE).
     """
     async def event_generator():
+        # Fetch current state first
+        task = await task_service.get_task_by_id(task_id)
+        if task:
+            initial_data = {
+                "id": task.id,
+                "state": task.state,
+                "progress": task.percentage,
+                "message": task.message,
+                "result": task.result,
+                "broadcast_status": task.broadcast_status,
+                "broadcast_at": task.broadcast_at.isoformat() if task.broadcast_at else None,
+                "broadcast_error": task.broadcast_error
+            }
+            yield f"data: {json.dumps(initial_data)}\n\n"
+            if task.state in [TaskState.COMPLETED, TaskState.ERROR]:
+                return
+
         queue = task_service.bus.subscribe(task_id)
         try:
             while True:
@@ -108,5 +125,20 @@ async def get_thenews_paper(
         message=task.message,
         result=task.result
     )
+
+@router.post("/deliver/{date_str}")
+async def trigger_manual_delivery(
+    background_tasks: BackgroundTasks,
+    date_str: str = Path(..., description="Date in YYYY-MM-DD format"),
+    papers: Optional[List[str]] = Query(None, description="List of newspapers to deliver (e.g., dawn, thenews)")
+):
+    """
+    Manually trigger the delivery pipeline for a specific date and set of papers.
+    """
+    from app.services.scheduler_service import execute_delivery_pipeline
+    validate_date(date_str)
+    background_tasks.add_task(execute_delivery_pipeline, date_str=date_str, papers=papers)
+    paper_msg = f" (Papers: {papers})" if papers else ""
+    return {"status": "success", "message": f"Delivery pipeline triggered for {date_str}{paper_msg}"}
 
 

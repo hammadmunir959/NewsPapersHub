@@ -2,7 +2,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sess
 from sqlalchemy.orm import declarative_base
 
 # Database Setup
-DATABASE_URL = "sqlite+aiosqlite:///./tasks.db"
+DATABASE_URL = "sqlite+aiosqlite:///./db/newspapershub.db"
 engine = create_async_engine(DATABASE_URL)
 AsyncSessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 

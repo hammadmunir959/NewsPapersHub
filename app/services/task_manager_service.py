@@ -1,12 +1,13 @@
 import logging
 import uuid
 from typing import Optional, Any, Callable, Dict, Set
+from datetime import datetime
 from sqlalchemy import delete, select
 import asyncio
 
 from app.core.database import AsyncSessionLocal
 from app.models.database_models import TaskRecord
-from app.models.schemas import TaskState
+from app.schemas.schemas import TaskState
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +50,12 @@ class TaskManagerService:
             result = await session.execute(stmt)
             return result.scalars().first()
 
+    async def get_task_by_id(self, task_id: str) -> Optional[TaskRecord]:
+        async with self.session_factory() as session:
+            stmt = select(TaskRecord).where(TaskRecord.id == task_id)
+            result = await session.execute(stmt)
+            return result.scalars().first()
+
     async def create_task(self, newspaper: str, date: str, city: Optional[str] = None) -> TaskRecord:
         task_id = str(uuid.uuid4())
         task = TaskRecord(
@@ -73,7 +80,10 @@ class TaskManagerService:
 
     async def publish(self, task_id: str, state: Optional[TaskState] = None, 
                       percentage: Optional[int] = None, message: Optional[str] = None, 
-                      result: Optional[Any] = None):
+                      result: Optional[Any] = None,
+                      broadcast_status: Optional[str] = None,
+                      broadcast_at: Optional[datetime] = None,
+                      broadcast_error: Optional[str] = None):
         """Update the current state of the task in DB (matches old task_manager API)."""
         async with self.session_factory() as session:
             stmt = select(TaskRecord).where(TaskRecord.id == task_id)
@@ -91,6 +101,12 @@ class TaskManagerService:
                         task.result = [r.model_dump() if hasattr(r, "model_dump") else r for r in result]
                     else:
                         task.result = result
+                if broadcast_status is not None:
+                    task.broadcast_status = broadcast_status
+                if broadcast_at is not None:
+                    task.broadcast_at = broadcast_at
+                if broadcast_error is not None:
+                    task.broadcast_error = broadcast_error
                 await session.commit()
                 
                 # Broadcast update to SSE subscribers
@@ -99,7 +115,10 @@ class TaskManagerService:
                     "state": task.state,
                     "progress": task.percentage,
                     "message": task.message,
-                    "result": task.result
+                    "result": task.result,
+                    "broadcast_status": task.broadcast_status,
+                    "broadcast_at": task.broadcast_at.isoformat() if task.broadcast_at else None,
+                    "broadcast_error": task.broadcast_error
                 })
 
     async def run_in_background(self, task_id: str, func: Callable, *args, **kwargs):
@@ -112,6 +131,5 @@ class TaskManagerService:
             logger.exception(f"Task {task_id} failed: {e}")
             await self.publish(task_id, state=TaskState.ERROR, percentage=0, message=str(e))
 
-# Global Instance
+# Global singleton — import task_service everywhere.
 task_service = TaskManagerService(AsyncSessionLocal)
-task_manager = task_service  # For backward compatibility
