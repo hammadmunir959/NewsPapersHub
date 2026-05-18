@@ -1,8 +1,13 @@
 import feedparser
 import logging
+import time
 from datetime import datetime, timezone, timedelta
 from typing import List, Dict, Optional, Callable
-from app.core.config import DAWN_RSS_FEEDS
+from app.core.config import DAWN_RSS_FEEDS, DAWN_USER_AGENT
+
+# Configure global User-Agent for feedparser outgoing HTTP requests
+feedparser.USER_AGENT = DAWN_USER_AGENT
+
 
 logger = logging.getLogger(__name__)
 
@@ -115,8 +120,37 @@ class RSSArticleFetcher:
 
         for section, feed_url in self.feeds.items():
             try:
-                logger.info("Fetching '%s' → %s", section, feed_url)
-                feed = feedparser.parse(feed_url)
+                feed = None
+                for attempt in range(1, 4):
+                    logger.info("Fetching '%s' → %s (attempt %d/3)", section, feed_url, attempt)
+                    feed = feedparser.parse(feed_url)
+                    
+                    if feed.entries:
+                        break
+                    
+                    # Inspect for transient connection/SSL/DNS or rate-limiting errors
+                    if feed.get("bozo") and feed.get("bozo_exception"):
+                        exc = feed.get("bozo_exception")
+                        logger.warning(
+                            "Attempt %d/3 failed for feed '%s': %s (%s)",
+                            attempt, section, str(exc), type(exc).__name__
+                        )
+                        if attempt < 3:
+                            time.sleep(1.0 * attempt)
+                    else:
+                        # Genuinely empty feed with no errors
+                        break
+
+                if not feed:
+                    logger.error("Failed to parse feed '%s' after all attempts", section)
+                    continue
+
+                if feed.get("bozo") and feed.get("bozo_exception") and not feed.entries:
+                    logger.error(
+                        "Failed to retrieve feed '%s' due to connection error: %s",
+                        section, feed.get("bozo_exception")
+                    )
+                    continue
 
                 entries = feed.entries
                 if self.max_per_feed:

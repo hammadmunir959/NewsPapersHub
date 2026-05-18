@@ -8,7 +8,6 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     curl \
     supervisor \
-    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv globally
@@ -21,6 +20,7 @@ COPY pyproject.toml uv.lock ./
 RUN uv venv && uv pip install -e .
 
 # Install Playwright browser (required for Dawn scraping)
+ENV PLAYWRIGHT_DOWNLOAD_CONNECTION_TIMEOUT=300000
 RUN uv run playwright install chromium --with-deps
 
 # Copy project files
